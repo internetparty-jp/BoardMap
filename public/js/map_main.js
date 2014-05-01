@@ -99,24 +99,43 @@ function initialize(plat,plng,zoom) {
         $('#area_list').append(opl);
         $('#area_list').after(acbtn);
 
-
-        //行政区の移動 プルダウン版////////
-        var op=$('<select/>');
+        //地域選択のプルダウン生成////////////
+        //ステータス
+        var st_op=$('<select class="DropDownList_anime_tar"><option value="open">未貼付</option><option value="close">貼付完了</option><option value="*" selected>全て表示</option></select>');
+        //行政区
+        var ct_op=$('<select class="DropDownList_anime_tar" />');
         if(!d.issue_categories){return;}
         var g=d.issue_categories;
-        op.append('<option value="">地域を選択</option>');
-
+        ct_op.append('<option value="">地域を選択</option>');
         $.each(g,function(i,val){
-            op.append('<option value="'+val['id']+'">'+val['name']+'</option>');
+            ct_op.append('<option value="'+val['id']+'">'+val['name']+'</option>');
         });
-        op.bind("change",function(eve){
-            //行政区に該当する掲示板の問い合わせ
-            var category_id=$(this).val();
-            var move_area_status=$('#move_area_status').val();
-             search_country_pos(category_id,move_area_status);
-        })
-        $('#move_area_distince').empty().append(op);
 
+        ///変更時イベント
+        $.each([st_op,ct_op],function(i,val){
+            val.bind("change",function(eve){
+                var category_id= ct_op.val();
+                var move_area_status=st_op.val();
+                search_country_pos(category_id,move_area_status);
+            });
+        });
+        $('#move_area_status').empty().append(st_op);
+        $('#move_area_distince').empty().append(ct_op);
+
+        //ドロップタウンUI生成
+        if (kendo.ui.DropDownList) {
+            var body = $(".km-pane");
+            $.each([st_op,ct_op],function(i,val){
+                val.kendoDropDownList({
+                    popup: { appendTo: body },
+                    animation: { open: { effects: body.hasClass("km-android") ? "fadeIn" : body.hasClass("km-ios") || body.hasClass("km-wp") ? "slideIn:up" : "slideIn:down" } }
+                });
+            });
+        }
+
+
+
+        //////////
         re_size_window_comp();//画面サイズの再計算（スマホの場合、プルダウンの長さでヘッダー高さが変わる）
         search_geo_pos();//起動時に、GPSで現在位置の地図と、付近のポスターを表示
     }
@@ -280,6 +299,7 @@ function move_area_address(){
  * 行政区と掲示板のステータスを指定して表示
  */
 function search_country_pos(category_id,status){
+    if(!category_id){return;}
       m_map_data_manager.map_data_clear();
       m_map_data_manager.set_category_ids([category_id]);
     m_map_data_manager.set_status(status);
