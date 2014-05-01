@@ -30,16 +30,39 @@ $.m_map_data_manager = function(element, options) {
   var _zoomLevel;
   var _load_record_info={};//読み込み対象のレコード情報を行政区別に格納
   var _issue_categories={};
+  var _nowposition_marker;
   ////////usr constructor//////////////
   plugin.init = function() {
     plugin.settings = $.extend({}, defaults, options);//デフォルト値の上書き
-        //地図のズーム時の処理
+
     if(plugin.settings.map){
+        //地図のズーム時の処理
       _zoomLevel=plugin.settings.map.getZoom();
       google.maps.event.addListener(plugin.settings.map, 'zoom_changed', function(){
         _zoomLevel = plugin.settings.map.getZoom();
-                plugin.set_show_info();//マーカーの表示
+       plugin.set_show_info();//マーカーの表示
       });
+
+        //現在位置のマーカー
+        var img = new google.maps.MarkerImage(
+            'img/bluedot.png',
+            null, // size
+            null, // origin
+            new google.maps.Point( 8, 8 ), // anchor (move to center of marker)
+            new google.maps.Size( 17, 17 ) // scaled size (required for Retina display icon)
+
+        );
+        _nowposition_marker= new google.maps.Marker({
+            flat: true,
+            icon: img,
+            map: plugin.settings.map,
+            optimized: false,
+            title: 'nowpos_ico',
+            visible: true,
+            zIndex:9999 //todo::どんな高い値を設定してもmarkerclustererが最前面に来て隠れる
+
+        });
+
     }
         //ブックマークデータをstorageから読み込み
         var ls=_load_storage("bookmark");
@@ -89,6 +112,22 @@ $.m_map_data_manager = function(element, options) {
      */
     plugin.set_location=function(array){
         plugin.settings.location=array;
+    }
+    /**
+     * 現在位置用のマーカー移動
+     */
+    plugin.set_nowposition_marker=function(pos_coords){
+        //var heading=pos_coords.heading //デバイスの向き。北をゼロとした角度で表したもの
+        //var accuracy=pos_coords.accuracy//位置の精度（何メートルほど誤差があるか）
+        var lat=pos_coords.latitude;
+        var lng=pos_coords.longitude
+        _nowposition_marker.setPosition(new google.maps.LatLng(lat,lng));
+    }
+    /**
+     * 現在位置のマーカー座標を取得 LatLng
+     */
+    plugin.get_nowposition_marker=function(){
+        return _nowposition_marker.getPosition()
     }
     /**
      * カテゴリーデータを設定
@@ -163,11 +202,6 @@ $.m_map_data_manager = function(element, options) {
         //var request_args={'key':API_KEY,'status_id':plugin.settings.status_id,'sort':'geom:' + loc.join(','),'offset':0,'limit':ISSU_LIMIT};
         var request_args={'status_id':plugin.settings.status_id,'sort':'geom:' + loc.join(','),'offset':0,'limit':ISSU_LIMIT};
         $(element).trigger("on_map_data_requesting",[request_args]);//データ要求中イベント
-        //if(DEBUG_PROXY){
-        //  $.getJSON(PROXY_URL,{'url':ISSU_URL+'?'+ $.param(request_args)},_cb);
-        //}else{
-        //  $.getJSON(ISSU_URL,request_args,_cb);
-        //}
         $.getJSON(ISSU_URL, request_args, _cb);
 
       //load_data用CB //上限以上のレコードがある場合はoffsetを追加してさらに読み込む
@@ -359,7 +393,7 @@ $.m_map_data_manager = function(element, options) {
   var _receive_new_area= function(json_d){
     _data_substitution(json_d);
     _map_data_draw();//マーカーの描画
-    plugin.set_current_map_position();
+  //  plugin.set_current_map_position();//マーカー全体を表示出来るように
     //データ更新完了イベント
     $(element).trigger("on_map_data_change_after");
   };

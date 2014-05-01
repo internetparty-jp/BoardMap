@@ -5,63 +5,73 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="BoardMap">
-    <title>Board Map</title>
-   <!-- <link href="css/button.css" rel="stylesheet" media="all" type="text/css" />
-    <link href="css/map_style.css" rel="stylesheet" media="all" type="text/css" />
-    &lt;!&ndash; <link href="/img/apple-touch-icon-120x120.png" sizes="120x120" rel="apple-touch-icon" /> &ndash;&gt;
+    <title><%= @title %></title>
+    <!--<link href="/css/button.css" rel="stylesheet" media="all" type="text/css" />-->
+    <link href="/css/map_style.css" rel="stylesheet" media="all" type="text/css" />
 
+    <link href="/kendoui/styles/kendo.common.min.css" rel="stylesheet" />
+    <link href="/kendoui/styles/kendo.default.min.css" rel="stylesheet" />
+    <link href="/kendoui/styles/kendo.mobile.all.min.css" rel="stylesheet" />
+    <!-- <link href="/img/apple-touch-icon-120x120.png" sizes="120x120" rel="apple-touch-icon" /> -->
+    <script type="text/javascript" src="/init.js"></script>
+   <!-- <script type="text/javascript" src="/js/knockout-3.1.0.js"></script>-->
     <script type="text/javascript" src="/js/jquery-2.1.0.min.js"></script>
-    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <script src="/kendoui/js/kendo.all.min.js"></script>
 
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?libraries=geometry&sensor=true"></script>
     <script type="text/javascript" src="/js/markerclusterer_compiled.js"></script>
     <script type="text/javascript" src="/js/jquery.m_map_data_manager.js"></script>
     <script type="text/javascript" src="/js/date.js"></script>
     <script type="text/javascript" src="/js/map-overlay.js"></script>
-    <script type="text/javascript" src="/js/map_main.js"></script>-->
+    <script type="text/javascript" src="/js/map_main.js"></script>
 
-    <link href="css/button.css" rel="stylesheet" media="all" type="text/css" />
-    <link href="css/map_style.css" rel="stylesheet" media="all" type="text/css" />
-
-    <script type="text/javascript" src="js/jquery-2.1.0.min.js"></script>
-    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
-
-    <script type="text/javascript" src="js/markerclusterer_compiled.js"></script>
-    <script type="text/javascript" src="js/jquery.m_map_data_manager.js"></script>
-    <script type="text/javascript" src="js/date.js"></script>
-    <script type="text/javascript" src="js/map-overlay.js"></script>
-    <script type="text/javascript" src="js/map_main.js"></script>
 
 </head>
 <body>
-<div id="header">
-    <ul>
-        <li class="distince">
-            <span id="move_area_distince"></span>
-        </li>
-        <li class="status">
-            <select id="move_area_status">
-                <option value="open">未貼付</option>
-                <option value="close">貼付完了</option>
-                <option value="*">全て表示</option>
-            </select>
-        </li>
-    </ul>
-    <a id="move_loc" href="javascript:void(0);" onclick="move_loc()" class="btn">付近の掲示板を表示</a>
-    <!--<a href="javascript:void(0);" onclick="show_float_panel('bookmark')" class="btn">MarkList</a>-->
-    <a id="info_btn" href="javascript:void(0);" onclick="show_float_panel('info')" class="btn">説明</a>
-    <a id="adv_btn" href="javascript:void(0);" onclick="show_float_panel('adv')" >★</a>
+<div data-role="view"  id="layoutView">
+
+    <header data-role="header">
+        <div data-role="navbar">
+            <span data-role="view-title"><%= @title %></span>
+        </div>
+    </header>
+    <div data-role="content" id="content-map_wrap">
+            <div id="map_canvas" ></div>
+    </div>
+
+    <footer data-role="footer">
+        <div data-role="navbar">
+            <div id="map_data_receive_info_wrap"><img id="map_data_receive_roading_img" src="js/loading.gif" width="80" height="80" alt=""/><div id="map_data_receive_info">未受信</div></div>
+            <a data-role="button" data-icon="settings" data-rel="popover" href="#popover-move_area">地域選択</a>
+            <a data-role="button" data-icon="settings" type="button" data-click="search_geo_pos_watch" id="search_geo_pos_watch-btn">自動追尾</a>
+            <a data-role="button"  data-icon="settings" data-click="show_info" >説明</a>
+            <a data-role="button" data-icon="settings" data-click="show_adv" >ADV</a>
+        </div>
+    </footer>
+
+    <div data-role="popover" id="popover-move_area" data-popup='{"width": "20em"}'>
+        <div data-role="view">
+            <ul data-role="listview" data-click="closeParentPopover">
+                <li class="distince">
+                    <span id="move_area_distince"></span>
+                </li>
+                <li class="status">
+                    <select id="move_area_status">
+                        <option value="open">未貼付</option>
+                        <option value="close">貼付完了</option>
+                        <option value="*" selected>全て表示</option>
+                    </select>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+
+
+<div data-role="modalview" id="info-modal" data-modal="false" style="width: 90%; height: 90%;">
+        <iframe id="info_area" src="info.html" style="width: 100%; height: 100%;"></iframe>
 </div>
-<div id="float_panel">
-    <!-- <a href="javascript:void(0);" onclick="hide_float_panel()" class="btn close">Close</a>-->
-    <div id="bookmark">
-        <textarea name="bookmark_list_txte" id="bookmark_list_txte" cols="45" rows="20"></textarea>
-        <hr/>
-        <a href="javascript:void(0);" onclick="clear_book_mark()" class="btn center">クリアー</a>
-    </div>
-    <div id="info">
-        <iframe id="info_area" src="info.html" ></iframe>
-    </div>
-    <div id="adv">
+<div data-role="modalview" id="adv-modal" data-modal="false" style="width: 90%; height: 90%;">
         <ul>
             <li>
                 <h1>掲示板データについて</h1>
@@ -81,7 +91,7 @@
                 <input name="move_area_address" class="input_text_mid" type="text" id="move_area_address" value=""/>
                 <a href="javascript:void(0);" onclick="hide_float_panel();move_area_address()" class="exec btn">移動</a>
             </li>
-            <!--<a href="javascript:void(0);" onclick="show_info()" class="btn ">吹出し表示</a>-->
+           <!-- <a href="javascript:void(0);" onclick="show_info()" class="btn ">吹出し表示</a>-->
             <li>
                 <h1>[試験機能]現在の地図の中心位置から近くの掲示板を表示</h1>
                 <p>現在表示している地図の位置にある掲示板を表示</p>
@@ -89,13 +99,10 @@
                 <a href="javascript:void(0);" onclick="hide_float_panel();load_now_mappos_data()" class="exec btn">表示</a>
             </li>
         </ul>
-    </div>
 </div>
-<div id="map_wrap" >
-    <div id="map_data_receive_info_wrap"><img id="map_data_receive_roading_img" src="js/loading.gif" width="80" height="80" alt=""/><div id="map_data_receive_info">未受信</div></div>
-    <div id="map_canvas" ></div>
 </div>
-<div id="load_lock"><img src="js/loading.gif"/>検索中</div>
+
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
 </body>
 </html>
