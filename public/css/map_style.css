@@ -1,4 +1,6 @@
-
+/***********************
+    マップ　#tabstrip-map
+************************/
 #map_canvas{
     width: 100%;
     height: 100%;
@@ -7,11 +9,14 @@
 #map_data_receive_info_wrap{
     background-color: #333;
     position: absolute;
+    top: 4px;
+    right: 4px;
     width: 160px;
     height: 28px;
     overflow: hidden;
     border: 1px solid #ccc;
     display: block;
+
 }
 #map_data_receive_roading_img,#map_data_receive_roading_mark{
     position: absolute;
@@ -41,15 +46,6 @@
 #map_data_receive_info span{
     color: #FFFFFF;
     margin-left: 2px;
-}
-/*読み込み中*/
-#modalview-load img {
-    display: block;
-    margin: 30px auto;
-}
-#modalview-load span{
-    display: block;
-    margin: 30px auto;
 }
 
 /*現在位置表示用*/
@@ -110,4 +106,127 @@
     #map_canvas div.gmnoprint[title="nowpos_ico"] {
         margin:-10px 0 0 -10px;
     }
+}
+
+/**GMAP掲示板の吹き出し**/
+#map_canvas .info_w_contents {
+    width: 250px;
+    height: 136px;
+    text-align: center;
+    overflow-y: auto;
+}
+#map_canvas .meta{
+    text-align: left;
+}
+#map_canvas .add{
+    text-align: left;
+    height: 60px;
+    overflow: hidden;
+}
+/*掲示板の共有ボタン*/
+#map_canvas .com_btn{
+
+}
+
+#map_canvas .com_btn:before
+{
+    font: 1em/1em "Kendo UI";
+    content: "\e0df";
+    text-align: left;
+    vertical-align: middle;
+}
+
+/***********************
+    機能　#tabstrip-adv
+************************/
+/*行政区一括選択リスト*/
+#area_list{
+    text-align: center;
+    overflow: hidden;
+}
+#area_list ul li{
+    display: block;
+    float: left;
+    border: 1px solid #666;
+    background-color: #fff;
+    margin: 2px;
+    width: 110px;
+    overflow: hidden;
+}
+/**フォーム要素の初期化*/
+#tabstrip-adv input{
+    position: relative;
+    top: 0;
+    right: 0;
+    margin-top: auto;
+    background: none;
+
+}
+#tabstrip-adv input[type=checkbox]{
+    -webkit-appearance: checkbox;
+}
+#tabstrip-adv input[type=text]{
+    -webkit-appearance: textfield;
+    border: 1px inset #666666;
+}
+/***********************
+    説明　#tabstrip-info
+************************/
+/*説明のiframe100%*/
+#tabstrip-info .km-scroll-container{height: 100%}
+
+/*GPSのボタンON状態*/
+#search_geo_pos_watch-btn.selected{
+    background-color: rgb(252, 126, 56);
+}
+/*kendou uiスタイル変更*/
+/*フッター*/
+.footer_copy{
+    text-align: center;
+    color: #ffffff;
+    font-size: 0.8em;
+    line-height: 1.8em;
+    background-color: rgb(0, 100, 181)!important;
+}
+
+.km-flat .km-header .km-navbar .km-view-title{
+    line-height: 1.2em;
+}
+
+.km-flat .km-header .km-navbar .km-view-title > * {
+    color: rgb(255, 255, 255);
+    font-size: .8em;
+}
+
+
+.km-flat .km-view .km-navbar {
+    background-color: rgb(0, 100, 181);
+}
+.km-flat .km-footer .km-navbar .km-view-title > * {
+    color: rgb(255, 255, 255);
+    line-height: 1em;
+    font-size: .8em;
+}
+
+.km-flat .km-view .km-tabstrip .km-button {
+    background-color: rgb(71, 71, 71);
+}
+.km-flat .km-view .km-tabstrip .km-button .km-icon{
+    height: 1.8rem;
+    width: 1.8rem;
+    font-size: 2rem;
+}
+
+.km-flat .km-view .km-tabstrip .km-button.km-state-active {
+    background-color: rgba(40, 40, 42, 0.65);
+}
+
+.km-flat .km-footer .km-navbar{
+    background-color: rgb(133, 133, 133);
+}
+.km-flat .km-footer .km-navbar .km-button{
+    background-color: rgb(0, 100, 181);
+}
+.km-flat .km-footer .km-navbar .km-button.km-state-active {
+    background-color: rgb(105, 151, 177);
 }

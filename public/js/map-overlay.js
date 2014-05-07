@@ -124,26 +124,21 @@ MapOverlay.prototype.show_info = function(flg) {
 }
 
 MapOverlay.prototype.refresh=function(){
+    var poster_data=this.data_;
     var id=this.id;
-    var description=this.data_.description;
-    var subject=this.data_.subject;
-    var is_select=this.select_comp_list[id];
+    var description=poster_data.description;
+    var subject=poster_data.subject;
+    is_select=false;// var is_select=this.select_comp_list[id];//ブックマーク用　未使用
+    var is_large=(this.priority==5);//優先度が「今すぐ：5」ならマーカーのサイズを大きくする
 
-    var is_large=(this.priority==5);//todo::優先度が「今すぐ：5」ならマーカーのサイズを大きくする
-    //完了時と未貼り付け時で吹き出しを変える
-    if(this.data_.status.id==1){
-        //未貼り付け
-        var t_str='完了したらtwitterに報告<br/><textarea id="tweet_txt_'+id+'" class="tweet_txt" name="tweet_txt" >'+TWEET_FORMAT.replace('<$subject$>',subject)+'</textarea>';
-        t_str += '<br /><br /><a href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(TWEET_FORMAT.replace('<$subject$>',subject)) + '&url=null" class="twitter-mention-button" data-lang="ja">Tweet to @posterdone</a>';
-        if(navigator.userAgent.search(/iPhone|Android/) != -1){
-            t_str += '<br /><br /><a style="text-decoration: underline;" href="twitter://post?message=' + encodeURIComponent(TWEET_FORMAT.replace('<$subject$>',subject)) + '"</a>twitterアプリでツイート</a>';
-        }
-        //this.info.setContent('<div class="info_w_contents open" style="margin: 5px;">' +'ID:'+id+'<br/>'+subject + '<br/>' + description+'<br/>●'+this.data_.status.name+'<hr/><a onclick="book_mark(this,'+id+')" class="btn comp'+(is_select?" selected":"")+'" >Mark</a></div>');
-        this.info.setContent('<div class="info_w_contents open" style="margin: 5px;">' +'ID:'+id+'<br/>'+subject + '<br/>' + description+'<br/>●'+this.data_.status.name+'<hr/>'+t_str+'</div>');
-    }else{
-        //完了・その他
-        this.info.setContent('<div class="info_w_contents close other" style="margin: 5px;">' +'ID:'+id+'<br/>'+subject + '<br/>' + description+'<br/>●'+this.data_.status.name+"</div>");
-    }
+    var mapinfo=$('<div class="info_w_contents " style="margin: 5px;"><div class="meta">' +'ID:'+id+'　'+this.data_.status.name+'</div><div class="add">'+subject + '(' + description+')</div><hr/></div>');
+    var com_btn=$('<button class="com_btn btn">共有</button>').click(function(){
+      $(document).trigger("on_maker_commbtn_click",[poster_data]);//共有ボタン押下イベント
+    });
+    mapinfo.append(com_btn);
+    this.info.setContent(mapinfo.get(0));
+
+
 
     this.marker.setIcon(this.createIco_img(is_select,is_large));
 }

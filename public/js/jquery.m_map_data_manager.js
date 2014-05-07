@@ -146,7 +146,7 @@ $.m_map_data_manager = function(element, options) {
   /**
    * 行政区に該当する掲示板の問い合わせ
    */
-  plugin.load_data = function(){
+  plugin.load_data = function(cb){
         if(!plugin.settings.category_ids.length){return;}
         //データ更新前イベント
         $(element).trigger("on_map_data_change_befor");
@@ -161,11 +161,6 @@ $.m_map_data_manager = function(element, options) {
             //var request_args={'key':API_KEY,'status_id':plugin.settings.status_id,'category_id':cat_id,'offset':offset,'limit':ISSU_LIMIT};
             var request_args={'status_id':plugin.settings.status_id,'category_id':cat_id,'offset':offset,'limit':ISSU_LIMIT};
             $(element).trigger("on_map_data_requesting",[request_args]);//データ要求中イベント
-            //if(DEBUG_PROXY){
-            //  $.getJSON(PROXY_URL,{'url':ISSU_URL+'?'+ $.param(request_args)},_cb);
-            //}else{
-            //  $.getJSON(ISSU_URL,request_args,_cb);
-            //}
             $.getJSON(ISSU_URL, request_args, _cb);
 
           //load_data用CB //上限以上のレコードがある場合はoffsetを追加してさらに読み込む
@@ -175,16 +170,22 @@ $.m_map_data_manager = function(element, options) {
               var offset=(d.offset)? d.offset:0;
               var total_count=(d.total_count)? d.total_count:0;
               _set_load_record_info(request_args,d);//レコード情報を設定
+
+
+                //取得地域 debug
+             // console.log("/cat_id:"+cat_id+" "+plugin.get_issue_categorie_names()[cat_id]+" issues:" + d.issues.length+"/ status_id:"+plugin.settings.status_id);
+
+              _receive_new_area(d);
+
               //total_countに満たない場合は追加読み込み
               if((offset+limit)<total_count){
                   _load(cat_id,offset+limit);
               }else{
                   $(element).trigger("on_map_data_completion");//データ要求完了イベント
+                  if(typeof cb =='function'){
+                      cb();
+                  }
               }
-                //取得地域 debug
-              console.log("/cat_id:"+cat_id+" "+plugin.get_issue_categorie_names()[cat_id]+" issues:" + d.issues.length+"/ status_id:"+plugin.settings.status_id);
-
-              _receive_new_area(d);
           }
         }
 
@@ -193,7 +194,7 @@ $.m_map_data_manager = function(element, options) {
   /**
    * 現在地近くの掲示板の問い合わせ
    */
-  plugin.load_nearby_data = function(){
+  plugin.load_nearby_data = function(cb){
         if(!plugin.settings.location.length){return;}
         var loc = plugin.settings.location;
         //データ更新前イベント
@@ -213,11 +214,14 @@ $.m_map_data_manager = function(element, options) {
           _set_load_record_info(request_args,d);//レコード情報を設定
 
           if((offset+limit)<total_count){
-            // alert("現在の範囲では"+limit+"以上の件数があります。"+limit+"件以上は表示されません。\r縮尺を下げて表示して下さい。")
+            // todo::追加読み込み　alert("現在の範囲では"+limit+"以上の件数があります。"+limit+"件以上は表示されません。\r縮尺を下げて表示して下さい。")
           }
-          $(element).trigger("on_map_data_completion");//データ要求完了イベント
-
           _receive_new_area(d);
+
+          $(element).trigger("on_map_data_completion");//データ要求完了イベント
+          if(typeof cb =='function'){
+              cb();
+          }
       }
   };
 
@@ -257,6 +261,7 @@ $.m_map_data_manager = function(element, options) {
             map.setCenter(new google.maps.LatLng(DEFAULT_LAT,DEFAULT_LNG));
             map.setZoom(ZOOM_LEVEL);
         }
+        //マーカー全体の中心を求める
     }
 
     /**

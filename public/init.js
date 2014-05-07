@@ -12,4 +12,4 @@ MAXZOOM=19;
 MINZOOM=8;
 DEFAULT_LAT=34.6938877;
 DEFAULT_LNG=135.50192900000002;
-TWEET_FORMAT="@macposterdone <$subject$> #清野ポスター祭り #秩父市議選";
+TWEET_FORMAT='@testposterdone <$subject$> #テストポスター祭り #testhash';
