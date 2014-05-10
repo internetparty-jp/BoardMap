@@ -135,7 +135,10 @@
     text-align: left;
     vertical-align: middle;
 }
-
+/*GPSのボタンON状態*/
+#search_geo_pos_watch-btn.selected{
+    background-color: rgb(252, 126, 56);
+}
 /***********************
     機能　#tabstrip-adv
 ************************/
@@ -172,14 +175,42 @@
 /***********************
     説明　#tabstrip-info
 ************************/
-/*説明のiframe100%*/
-#tabstrip-info .km-scroll-container{height: 100%}
 
-/*GPSのボタンON状態*/
-#search_geo_pos_watch-btn.selected{
-    background-color: rgb(252, 126, 56);
+#tabstrip-info-content h1{
+    color: #5C240E;
+    font-weight: bold;
+    display: block;
+    font-size: 15px;
+    border: 1px solid #FF5200;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    text-indent: 8px;
+    background-color: #FFFBE4;
+    padding: 4px;
 }
-/*kendou uiスタイル変更*/
+#tabstrip-info-content h3{
+    margin-top: 6px;
+    margin-left: 10px;
+    color: #BE4C00;
+    font-size:14px;
+    font-weight: bold;
+    padding: 3px;
+    display: block;
+    border-left: 6px solid #FF6600;
+}
+#tabstrip-info-content p{
+    margin-left: 20px;
+    margin-top: 10px;
+}
+
+#tabstrip-info-content #wrapper img.sc{
+    margin: 10px 0 ;
+}
+
+
+/***********************
+    kendou uiスタイル変更
+************************/
 /*フッター*/
 .footer_copy{
     text-align: center;
