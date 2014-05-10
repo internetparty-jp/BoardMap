@@ -3,3 +3,5 @@ vendor
 .*.swp
 .DS_Store
 .idea
+issues.json.php
+issues.json.php
