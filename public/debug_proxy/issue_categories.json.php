@@ -4,7 +4,7 @@ ini_set( "display_errors", "Off");
 
 
 define('APIURL','http://beta.shirasete.jp/projects/ieiri-poster/issue_categories.json');
-define('API_KEY','2a78b1a65702832d27b817a908b42f227f8dc377');
+define('API_KEY','xxxxxxxxxxxxxxxxxxxxxxxx');
 $_GET['key']=API_KEY;
 
 
