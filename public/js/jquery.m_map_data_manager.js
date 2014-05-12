@@ -2,9 +2,10 @@
  * 地図データ管理
  * ●イベント
  * データ更新前イベント on_map_data_change_befor (void)
- * 受信件数状況通知イベント on_map_data_receive_info (request_args：APIリクエスト引数obj,status_info：行政区別のロード情報)
  * データ要求中イベント on_map_data_requesting (request_args：APIリクエスト引数obj )
  * データ要求完了イベント on_map_data_completion (void)
+ * データ要求エラー　    on_map_data_fail (textStatus,jqXHR.responseText)
+ * データ要求受信中 (行政区に該当する掲示板の問い合わせ 経過監視用)　on_map_data_done (offset,total_count)
 */
 
 (function($) {
@@ -31,12 +32,13 @@ $.m_map_data_manager = function(element, options) {
   var _load_record_info={};//読み込み対象のレコード情報を行政区別に格納
   var _issue_categories={};
   var _nowposition_marker;
+  var  _total_pos_count=0;
   ////////usr constructor//////////////
   plugin.init = function() {
     plugin.settings = $.extend({}, defaults, options);//デフォルト値の上書き
 
     if(plugin.settings.map){
-        //地図のズーム時の処理
+      //地図のズーム時の処理
       _zoomLevel=plugin.settings.map.getZoom();
       google.maps.event.addListener(plugin.settings.map, 'zoom_changed', function(){
         _zoomLevel = plugin.settings.map.getZoom();
@@ -50,7 +52,6 @@ $.m_map_data_manager = function(element, options) {
             null, // origin
             new google.maps.Point( 8, 8 ), // anchor (move to center of marker)
             new google.maps.Size( 17, 17 ) // scaled size (required for Retina display icon)
-
         );
         _nowposition_marker= new google.maps.Marker({
             flat: true,
@@ -60,9 +61,7 @@ $.m_map_data_manager = function(element, options) {
             title: 'nowpos_ico',
             visible: true,
             zIndex:9999 //todo::どんな高い値を設定してもmarkerclustererが最前面に来て隠れる
-
         });
-
     }
         //ブックマークデータをstorageから読み込み
         var ls=_load_storage("bookmark");
@@ -150,7 +149,6 @@ $.m_map_data_manager = function(element, options) {
         if(!plugin.settings.category_ids.length){return;}
         //データ更新前イベント
         $(element).trigger("on_map_data_change_befor");
-        _clear_load_record_info();
         //行政区複数選択の場合はループで呼び出す
         for(var i in plugin.settings.category_ids){
             _load(plugin.settings.category_ids[i]);
@@ -161,22 +159,24 @@ $.m_map_data_manager = function(element, options) {
             //var request_args={'key':API_KEY,'status_id':plugin.settings.status_id,'category_id':cat_id,'offset':offset,'limit':ISSU_LIMIT};
             var request_args={'status_id':plugin.settings.status_id,'category_id':cat_id,'offset':offset,'limit':ISSU_LIMIT};
             $(element).trigger("on_map_data_requesting",[request_args]);//データ要求中イベント
-            $.getJSON(ISSU_URL, request_args, _cb);
+            $.getJSON(ISSU_URL, request_args, _cb)
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    $(element).trigger("on_map_data_fail",[textStatus,jqXHR.responseText]);//エラー時
+                })
+                .done(function(json) {
+                  //  $(element).trigger("on_map_data_done",[json]);//成功時(経過監視用)
 
+                });
           //load_data用CB //上限以上のレコードがある場合はoffsetを追加してさらに読み込む
           function _cb(d){
               //len、limit、offsetが無い場合の担保（無限ロード防止）
               var limit=(d.issues.length)?d.issues.length:ISSU_LIMIT;
               var offset=(d.offset)? d.offset:0;
               var total_count=(d.total_count)? d.total_count:0;
-              _set_load_record_info(request_args,d);//レコード情報を設定
-
-
-                //取得地域 debug
-             // console.log("/cat_id:"+cat_id+" "+plugin.get_issue_categorie_names()[cat_id]+" issues:" + d.issues.length+"/ status_id:"+plugin.settings.status_id);
+              _total_pos_count=total_count;
 
               _receive_new_area(d);
-
+              $(element).trigger("on_map_data_done",[offset,total_count]);//成功時(経過監視用)
               //total_countに満たない場合は追加読み込み
               if((offset+limit)<total_count){
                   _load(cat_id,offset+limit);
@@ -199,20 +199,25 @@ $.m_map_data_manager = function(element, options) {
         var loc = plugin.settings.location;
         //データ更新前イベント
         $(element).trigger("on_map_data_change_befor");
-        _clear_load_record_info();
-        //var request_args={'key':API_KEY,'status_id':plugin.settings.status_id,'sort':'geom:' + loc.join(','),'offset':0,'limit':ISSU_LIMIT};
         var request_args={'status_id':plugin.settings.status_id,'sort':'geom:' + loc.join(','),'offset':0,'limit':ISSU_LIMIT};
         $(element).trigger("on_map_data_requesting",[request_args]);//データ要求中イベント
-        $.getJSON(ISSU_URL, request_args, _cb);
+        $.getJSON(ISSU_URL, request_args, _cb)
+          .fail(function(jqXHR, textStatus, errorThrown) {
+                $(element).trigger("on_map_data_fail",[textStatus,jqXHR.responseText]);
+            })
+          .done(function(json) {
+                $(element).trigger("on_map_data_done",[json]);
+            });
 
       //load_data用CB //上限以上のレコードがある場合はoffsetを追加してさらに読み込む
+      //todo::現状は付近検索のAPIは中心位置から近い順にMAX100件しか帰らない為、追加読み込みは不要
       function _cb(d){
           //len、limit、offsetが無い場合の担保
           var limit=(d.limit)?d.limit:ISSU_LIMIT;
           var offset=(d.offset)? d.offset:0;
           var total_count=(d.total_count)? d.total_count:0;
-          _set_load_record_info(request_args,d);//レコード情報を設定
-
+          _total_pos_count=total_count;
+          //$(element).trigger("on_map_nearby_data_done",[offset,total_count]);//成功時(経過監視用)
           if((offset+limit)<total_count){
             // todo::追加読み込み　alert("現在の範囲では"+limit+"以上の件数があります。"+limit+"件以上は表示されません。\r縮尺を下げて表示して下さい。")
           }
@@ -230,6 +235,7 @@ $.m_map_data_manager = function(element, options) {
      * マーカーデータのclear
      */
     plugin.map_data_clear=function(){
+
         MapOverlay.prototype.clear_markers();//markerの一括消去
         for(var i in _overlay){
             if(_overlay[i]){
@@ -322,20 +328,29 @@ $.m_map_data_manager = function(element, options) {
     }
 
     /**
-     * 読み込み対象のレコード件数情報の取得
+     * 読み込んだポスター件数情報の取得 （地域選択用）
      */
-    plugin.get_load_record_info=function(){
-        var total_count=0;
+    plugin.get_load_record_info_count=function(){
+        //console.time('timer');
         var now_cnt={};
-        var status_id;
-        for(var i in _load_record_info){
-            total_count+=_load_record_info[i].total_count;
-            for(var m in _load_record_info[i].now_cnt){
-                    now_cnt[m]=now_cnt[m]?now_cnt[m]+_load_record_info[i].now_cnt[m]:_load_record_info[i].now_cnt[m];
-            }
-            status_id=_load_record_info[i].status_id;// ∞対1
+        // _overlay[id].data_.status.id を総なめして算出
+        for(var idx in _overlay){
+            var pos_data=_overlay[idx].data_;
+            var id=pos_data.status.id;
+            now_cnt[id]=now_cnt[id]==undefined?1:++now_cnt[id];
         }
-        return{'status_id':status_id,'now_cnt':now_cnt,'total_count':total_count,'detail':_load_record_info};
+        //console.timeEnd('timer');
+        return{'now_cnt':now_cnt,'total_count':_total_pos_count};
+    }
+    /**
+     * 画面上に表示されているポスター件数情報の取得 （GPS追尾用）
+     */
+    plugin.get_view_disp_record_info_count=function(){
+        var now_cnt={};
+        for(var idx in STATUS_DATA_LIST){
+            now_cnt[idx]=undefined;
+        }
+        return{'now_cnt':now_cnt,'total_count':_total_pos_count};
     }
 //=============================================================================
 // private method
@@ -394,8 +409,16 @@ $.m_map_data_manager = function(element, options) {
 
   /**
    * マーカーデータの受信時
+   *
    */
   var _receive_new_area= function(json_d){
+      //--------------------------------------------------------
+      //連続して読み込むとマーカーのキャッシュ(_overlay)が溜まるので、一定以上で解放(map_data_clear())する
+      //地域選択時は 以前野データをclear（_overlay=0) してしてから取得されるので、MAKER_CASH_MAX_LENの影響を受けない
+      //--------------------------------------------------------
+      if(MAKER_CASH_MAX_LEN < Object.keys(_overlay).length){
+          plugin.map_data_clear();
+      }
     _data_substitution(json_d);
     _map_data_draw();//マーカーの描画
   //  plugin.set_current_map_position();//マーカー全体を表示出来るように
@@ -405,7 +428,7 @@ $.m_map_data_manager = function(element, options) {
 
   /**
    * データの差分更新
-     * todo::API側で経度緯度で表示している地図の範囲に該当する掲示板を返せるような仕様ならば、ここを改修
+     * todo::API側でで表示している地図の矩形範囲(4点の経度緯度)に該当する掲示板を返せるような仕様ならば、ここを改修
    */
   var _data_substitution= function(data){
         if(!data.issues){return;}
@@ -432,7 +455,7 @@ $.m_map_data_manager = function(element, options) {
 
     /*
      //---------------------------//
-     //API側で経度緯度で該当する掲示板を返せるような仕様ならば、以下で画面外のマーカーを削除する
+     //todo::API側でで表示している地図の矩形範囲(4点の経度緯度)に該当する掲示板を返せるような仕様ならば、ここを改修
      //---------------------------//
     //削除される差分を検出（追加したdata以外の物）
     _del_map_list=[];
@@ -445,9 +468,9 @@ $.m_map_data_manager = function(element, options) {
 
   /**
    * 追加・削除する掲示板データを元にマーカーを追加・削除
+   *
    */
   var _map_data_draw=function(){
-    var mcs=[];
     for (var i in _add_map_list){
       var id=_add_map_list[i];
       var data=_map_data[id];
@@ -502,47 +525,6 @@ $.m_map_data_manager = function(element, options) {
         var r=Math.min(latZoom, lngZoom, ZOOM_MAX);
 
         return isNaN(r)?MINZOOM:r;
-    }
-
-    /**
-     * 読み込み対象のレコード情報を設定
-     * @private
-     */
-    var _set_load_record_info=function(request_args,data){
-        var status_id=request_args.status_id;
-        var category_id=isNaN(parseInt(request_args.category_id))?0:request_args.category_id;
-        var limit=data.limit;
-        var offset=data.offset;
-        var total_count=data.total_count;
-        var lens={};
-        if(data.issues instanceof Array){
-            for(var i in data.issues){
-                var t=data.issues[i].status.id;
-                if(t){
-                    lens[t]=lens[t]?++lens[t]:1;
-                }
-            }
-        }
-        //var len=(data.issues instanceof Array)? data.issues.length:0;
-      //  var status_info={'category_id':category_id,'status_id':status_id,'now_cnt':offset+len,'total_count':total_count};
-
-        // unコード
-        if(_load_record_info[category_id]){
-            for(var i in _load_record_info[category_id].now_cnt){
-                lens[i]=lens[i]?lens[i]+_load_record_info[category_id].now_cnt[i]:_load_record_info[category_id].now_cnt[i];
-            }
-        }
-        var status_info={'category_id':category_id,'status_id':status_id,'now_cnt':lens,'total_count':total_count};
-        _load_record_info[category_id]=status_info;
-
-        $(element).trigger("on_map_data_receive_info",[request_args,status_info]);//受信件数状況イベント通知
-    }
-
-    /**
-     * 読み込み対象のレコード情報を初期化
-     */
-    var _clear_load_record_info=function(){
-        _load_record_info={};
     }
 
     /**

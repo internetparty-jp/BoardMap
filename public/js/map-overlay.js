@@ -3,6 +3,7 @@
 //=============================================================================
 var MarkerCluster;
 var MapOverlay_Overlap_chlist={};
+
 //markerのSTATUS種類　1:未完了 5:完了　99:ブックマーク時のアイコン色
 MAKER_STATUS_S={
     0:{'color':'336699'},//default
@@ -28,6 +29,7 @@ function MapOverlay(map,data,manager_ref,select_comp_list) {
             MarkerCluster[i].setMaxZoom(MARKERCLUSTER_MAXZOOM);
         }
     }
+
 
     this.select_comp_list=select_comp_list;
     this.map_ = map;
@@ -137,9 +139,6 @@ MapOverlay.prototype.refresh=function(){
     });
     mapinfo.append(com_btn);
     this.info.setContent(mapinfo.get(0));
-
-
-
     this.marker.setIcon(this.createIco_img(is_select,is_large));
 }
 

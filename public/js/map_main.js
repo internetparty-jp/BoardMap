@@ -1,31 +1,75 @@
-//=============================================================================
-// エントリーポイント
-//=============================================================================
+/**
+ * メインロジック
+ */
+
+//グローバル定数（内部固定用）
+MAKER_CASH_MAX_LEN=400;//リークを防ぐ為、一定数以上溜まるとマーカーを強制消去する閾値
+//ステータスの種類　id:ステータスID ico:左上アイコン画像 name:ステータスのプルダウンに表示する名称
+STATUS_DATA_LIST={
+    1:{ico:"js/marker_r.png",name:"未貼付"},
+    5:{ico:"js/marker_b.png",name:"貼付完了"},
+    99:{ico:"js/marker_g.png",name:"その他"}
+}
+
+NAVI_CON_APPNAME='AUaH70rv';//NaviCon連携スキーマの登録ID  アプリ(登録URL毎)に申請（https://github.com/open-election/BoardMap）
+GEO_AUTO_LOAD_BETWEEN=300;//MAP移動時にどの程度移動すれば、掲示板情報を再検索するか(メートル)
+GEO_MAXIMUMAGE=10000;//GPSの定期的な取得間隔(ms)　GEO_TIMEOUTより大きい値　端末のバッテリー消費に影響
+GEO_TIMEOUT=10000;//GPSのタイムアウト(ms) 精度に影響
+
 var currentInfoWindow;
 var APP;//kendo UI
-var observable;//kendo UI bind val
 var user_settings;//UIから変更可能な各種ユーザー設定値
 var map;
 var m_map_data_manager;
 var geocoder;
 var geo_watch_id=0;
-var geo_auto_load_between=300;//MAP移動時にどの程度移動すれば、掲示板情報を再検索するか(メートル)
-var geo_maximumAge=10000;//GPSの定期的な取得間隔(ms)　geo_timeoutより大きい値　端末のバッテリー消費に影響
-var geo_timeout=10000;//GPSのタイムアウト(ms)
-var navi_con_appName='AUaH70rv';//NaviCon連携スキーマの登録ID  アプリ(登録URL毎)に申請（https://github.com/open-election/BoardMap）
-var dragend_old_latlng;//geo_auto_load_betweenの移動量判定用
 
-document.ontouchmove = function(event){
+var dragend_old_latlng;//GEO_AUTO_LOAD_BETWEENの移動量判定用
+var gps_tracking_mode=false;//GPS追尾モードかのフラグ
+
+var gps_accuracy=0;//最後に取得したGPSの誤差
+
+document.ontouchmove = function(event){//スマホでBGがバウンドするのを禁止
     event.preventDefault();
 }
 
+//=============================================================================
+// エントリーポイント
+//=============================================================================
 $(function() {
 
+    //-----------------------------
+    //動作環境をチェック　動作環境はchromeとsafariのみ。それ以外は起動しない
+    //-----------------------------
 
+    var ua=navigator.userAgent.toLocaleLowerCase();
+    var checker=false;
+    var addhtml="";
+    if(ua.indexOf("android")!=-1){//android
+        checker=(ua.indexOf("chrome")!=-1);//androidはchromeのみ
+        addhtml='<br/><a href="https://play.google.com/store/apps/details?id=com.android.chrome&hl=ja"><img alt="" src="/img/google_play.jpg"></a>';
+      //  alert("android "+checker);
+    }else if(ua.indexOf("iphone")!=-1||ua.indexOf("ipad")!=-1||ua.indexOf("ipod")!=-1){//ios
+        checker=(ua.indexOf("safari")!=-1 && ua.indexOf("mobile")!=-1);//ipad iphone はsafariのみ（chromeは不可）
+       // alert("ios "+checker);
+    }else{//それ以外の端末は動作保証外だが、動くかもしれないので、safariとchromeならOKにしておく。
+        checker=(ua.indexOf("safari")!=-1 || ua.indexOf("chrome")!=-1);
+       // alert("other "+checker);
+    }
+    if(!checker){
+        alert("本アプリの利用は、Chrome又はSafariをご利用下さい。");
+        $('body').html('動作対象外のブラウザです<br/>本アプリの利用は、Chrome又はSafariをご利用下さい。'+addhtml);
+        return;
+    }
+
+    //-----------------------------
+    //kendou uiの初期化
+    //-----------------------------
     APP = new kendo.mobile.Application(document.body,
         {
         loading: "<br/><h1>読み込み中</h1>",
             hideAddressBar: true//アドレスバー非表示(iosのみ)
+            ,updateDocumentTitle:true
             ,hashBang:false
             //,serverNavigation:true//ajaxロード禁止
             ,skin: "flat"//指定しないと端末毎にmobileのheaderとfooterの位置が逆転した意図しないスキンが適用される
@@ -37,7 +81,6 @@ $(function() {
     user_settings = kendo.observable({
         gps_auto_search:true//地図ドラッグ時に自動的に近くのポスターを検索
     });
-
     kendo.bind($("span"), user_settings);
     kendo.bind($("input"), user_settings);
 
@@ -101,7 +144,13 @@ function initialize(plat,plng,zoom) {
         //kendo.init($('#area_list'));
         //地域選択のプルダウン生成////////////
         //ステータス
-        var st_op=$('<select class="DropDownList_anime_tar"><option value="open">未貼付</option><option value="close">貼付完了</option><option value="*" selected>全て表示</option></select>');
+        var st_op=$('<select class="DropDownList_anime_tar" />');
+        st_op.append('<option value="*" selected>全て表示</option>');
+        $.each(STATUS_DATA_LIST,function(i,val){
+            st_op.append('<option value="'+i+'">'+val['name']+'</option>');
+        });
+
+        //var st_op=$('<select class="DropDownList_anime_tar"><option value="open">未貼付</option><option value="close">貼付完了</option><option value="*" selected>全て表示</option></select>');
         //行政区
         var ct_op=$('<select class="DropDownList_anime_tar" />');
         if(!d.issue_categories){return;}
@@ -117,9 +166,7 @@ function initialize(plat,plng,zoom) {
                 var category_id= ct_op.val();
                 var move_area_status=st_op.val();
                 stop_geo_pos_watch();//地域選択時は自動追尾を停止
-                search_country_pos(category_id,move_area_status,function(){
-                    m_map_data_manager.set_current_map_position();//表示後に全体を表示出来るサイズにズーム
-                });
+                search_country_pos(category_id,move_area_status);
             });
         });
         $('#move_area_status').empty().append(st_op);
@@ -154,38 +201,61 @@ function initialize(plat,plng,zoom) {
 
     //地図データ変更完了時処理
     $(document).bind("on_map_data_change_befor", function(){
-        show_load_lock();//読み込み中画面の表示
+       // show_load_lock();//読み込み中画面の表示
     });
     $(document).bind("on_map_data_change_after", function(){
-        hide_load_lock();//読み込み中画面の解除
+       // hide_load_lock();//読み込み中画面の解除
 
     });
 
-    //ポスター件数受信時
-    $(document).bind("on_map_data_receive_info", function(eve,request_args,status_info){
-        //件数表示とstatusアイコンの切り替え
-        var info_data= m_map_data_manager.get_load_record_info();
-        now_cnt=info_data.now_cnt;
-        //呼び出すstatusによって左のmarkerを変える
-        ico={1:"js/marker_r.png",5:"js/marker_b.png",99:"marker_g.png"};
-        var html="";
-        for(var i in now_cnt){
-            html+='<img src="'+ico[i]+'"/><span>'+now_cnt[i]+'</span>';
-        };
-        html+='<span>/'+info_data.total_count+'件</span>';
-        $("#map_data_receive_info").empty();
-        $("#map_data_receive_info").html(html);
-    });
     //ポスター件数　データ要求中
     $(document).bind("on_map_data_requesting", function(eve,request_args){
         $("#map_data_receive_roading_img").show();
         $("#map_data_receive_roading_mark").hide();
     });
+
+    //ポスター件数 データ要求受信中(行政区に該当する掲示板の問い合わせ 経過監視用)
+    $(document).bind("on_map_data_done", function(eve,offset,total_count){
+        APP.changeLoadingMessage("受信中 "+offset+"/"+total_count);
+    });
+
     //ポスター件数　データ要求完了
     $(document).bind("on_map_data_completion", function(eve){
+        //件数表示集計
+        var info_data;
+        if(gps_tracking_mode){
+            //todo::GPS追尾で取得した場合
+            info_data= m_map_data_manager.get_view_disp_record_info_count();
+        }else{
+            //todo::地域選択で呼び出した場合
+            //件数表示とstatusアイコンの切り替え
+            info_data= m_map_data_manager.get_load_record_info_count();
+        }
+
+        var now_cnt=info_data.now_cnt;
+        //呼び出すstatusによって左のmarkerを変える
+        var html="";
+        for(var i in now_cnt){
+            if(now_cnt[i]!=undefined){
+                html+='<img src="'+STATUS_DATA_LIST[i].ico+'"/><span>'+now_cnt[i]+'</span>';
+            }
+        };
+        html+='<span>　'+info_data.total_count+'件</span>';
+        $("#map_data_receive_info").empty();
+        $("#map_data_receive_info").html(html);
+
+
         $("#map_data_receive_roading_img").hide();
         $("#map_data_receive_roading_mark").show();
     });
+
+
+    //データの要求失敗
+    $(document).bind("on_map_data_fail", function(textStatus,responseText){
+        $("#map_data_receive_roading_img").hide();
+        hide_load_lock();//どこで画面ロックが使われるか分からないので、エラー時は取りあえず画面ロックを解除しておく
+    });
+
     //GMAPのマーカーの共有ボタン押下
     $(document).bind("on_maker_commbtn_click", function(eve,poster_data){
         open_map_common_actions($("#map-common-actions"),poster_data);
@@ -206,24 +276,20 @@ function initialize(plat,plng,zoom) {
      //  console.log(map.getZoom());
     });
 
-   /* //GMAPドラッグ移動開始
-    var dragstart_latlng;
-    google.maps.event.addListener(map, 'dragstart',function(){
-        dragstart_latlng=map.getCenter();
-
-    });*/
     //GMAPドラッグ移動終了　
     google.maps.event.addListener(map, 'dragend',function(){
         //ドラッグ移動終了＞画面停止イベント ドラッグ終了後の「idle」にバインド
         google.maps.event.addListenerOnce(map, 'idle', function(){
             //GPS自動追尾時は、地図のドラッグ時に、地図の中心位置から近くの掲示板を取得
-            if(geo_watch_id && user_settings.gps_auto_search){
-
+            if(gps_tracking_mode && user_settings.get("gps_auto_search")){
                 var now_latlng=map.getCenter();
-                //geo_auto_load_betweenで指定した以上の距離の移動があれば、掲示板情報を再検索
-                if(google.maps.geometry.spherical.computeDistanceBetween(dragend_old_latlng ,now_latlng)>=geo_auto_load_between){
-                    load_now_mappos_data();
-                    dragend_old_latlng=now_latlng;
+                //GEO_AUTO_LOAD_BETWEENで指定した以上の距離の移動があれば、掲示板情報を再検索
+                if(google.maps.geometry.spherical.computeDistanceBetween(dragend_old_latlng ,now_latlng)>=GEO_AUTO_LOAD_BETWEEN){
+                    m_map_data_manager.set_status('*');
+                    m_map_data_manager.set_location([now_latlng.lat(),now_latlng.lng()]);
+                    m_map_data_manager.load_nearby_data(function(){
+                        dragend_old_latlng=now_latlng;
+                    });
                 }
             }else{
                 dragend_old_latlng=map.getCenter();
@@ -239,6 +305,7 @@ function initialize(plat,plng,zoom) {
 
   ////コンテンツ初期化//////////////////////////////////////////
 //resize_gmap();
+
 
 }
 
@@ -302,7 +369,7 @@ function open_map_common_actions(tra_jq,poster_data){
         send_nav_code_jq.unbind("touchend");
         send_nav_code_jq.bind("touchend", function(e){
             //スキーム生成
-            var scm='navicon.denso.co.jp/setPOI?ver=1.4&ll='+encodeURIComponent(lat_lng)+'&appName='+navi_con_appName;
+            var scm='navicon.denso.co.jp/setPOI?ver=1.4&ll='+encodeURIComponent(lat_lng)+'&appName='+NAVI_CON_APPNAME;
             //アプリの検出　ex) http://qiita.com/ooyabuh/items/388ffb0427b2772a9c66
             if (is_app_store()=="android") {
                 location.href='intent://'+scm+'#Intent;scheme=navicon;package=jp.co.denso.navicon.view;end';
@@ -360,7 +427,9 @@ function move_area_address(){
         var location = res[0].geometry.location;
             map.panTo(location);
             dragend_old_latlng=map.getCenter();
-            search_vicinity_poster(location.lat(),location.lng(),'*',function(){
+            m_map_data_manager.set_status('*');
+            m_map_data_manager.set_location([location.lat(),location.lng()]);
+            m_map_data_manager.load_nearby_data(function(){
                 m_map_data_manager.set_current_map_position();//表示後に全体を表示出来るサイズにズーム
             });
             strip_tab_to('tabstrip-map');
@@ -378,10 +447,14 @@ function move_area_address(){
  */
 function search_country_pos(category_id,status,cb){
     if(!category_id){return;}
+        show_load_lock();
         m_map_data_manager.map_data_clear();
         m_map_data_manager.set_category_ids([category_id]);
         m_map_data_manager.set_status(status);
-        m_map_data_manager.load_data(cb);
+        m_map_data_manager.load_data(function(){
+            m_map_data_manager.set_current_map_position();//表示後に全体を表示出来るサイズにズーム
+            hide_load_lock();
+        });
     }
 /**
  * GPSで現在位置の地図を表示し、その付近のステータスが「完了と未完了」のポスターを表示
@@ -389,16 +462,25 @@ function search_country_pos(category_id,status,cb){
 function search_geo_pos(){
     show_load_lock();
     navigator.geolocation.getCurrentPosition(function(pos) {
+           // console.log("誤差 "+pos.coords.accuracy);
+        gps_accuracy=pos.coords.accuracy;
+        m_map_data_manager.map_data_clear();
         map.panTo(new google.maps.LatLng(pos.coords.latitude,pos.coords.longitude));
         dragend_old_latlng=map.getCenter();
         m_map_data_manager.set_nowposition_marker(pos.coords)//現在位置にマーク描画
-        search_vicinity_poster(pos.coords.latitude,pos.coords.longitude,'*');//ポスター検索
+            //ポスター検索
+            m_map_data_manager.set_status('*');
+            m_map_data_manager.set_location([pos.coords.latitude,pos.coords.longitude]);
+            m_map_data_manager.load_nearby_data(function(){
+                m_map_data_manager.set_current_map_position();//表示後に全体を表示出来るサイズにズーム
+                hide_load_lock();
+            });
     }, function(e) {
             hide_load_lock();
         alert(get_geolocation_err_msg(e.code));//+ e.message
         stop_geo_pos_watch();
     },
-        {enableHighAccuracy:true,timeout:geo_timeout}
+        {enableHighAccuracy:true,timeout:GEO_TIMEOUT}
     );
 }
 /**
@@ -408,18 +490,27 @@ function search_geo_pos(){
 function search_geo_pos_watch(){
     var old_latlng=m_map_data_manager.get_nowposition_marker();
     if (navigator.geolocation) {
-        //トグル処理
+        //既にONの時は現在位置に戻る処理（停止は無し）
         if(geo_watch_id){
-            stop_geo_pos_watch();
+            //todo::GPSの誤差が大きい場合(wifi等)再取得する
+           // stop_geo_pos_watch();
+            var now_latlng=m_map_data_manager.get_nowposition_marker();
+            map.panTo(now_latlng);
+            m_map_data_manager.set_location([now_latlng.lat(),now_latlng.lng()]);
+            m_map_data_manager.load_nearby_data(function(){
+                old_latlng=now_latlng;
+            });
             return;
         }else{
+            user_settings.set('gps_tracking_mode',true);
             //初回のみ処理（初期化処理）
             search_geo_pos();
-            //$("#search_geo_pos_watch-btn").css({'background-color':'#C7E7FD'});//無理矢理
-            $("#search_geo_pos_watch-btn").addClass('selected');
+            gps_tracking_mode=true;
+           $("#search_geo_pos_watch-btn").addClass('selected');
         }
-
         geo_watch_id= navigator.geolocation.watchPosition(function(pos) {
+                gps_accuracy=pos.coords.accuracy;
+                  //  console.log("誤差 "+pos.coords.accuracy);
                 var now_latlng=new google.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
                 m_map_data_manager.set_nowposition_marker(pos.coords);//現在位置にマーク描画
                 //----------------------------------------------------------------------------
@@ -427,18 +518,22 @@ function search_geo_pos_watch(){
                 //  computeDistanceBetween(from,to) 2点間の距離算出 使用にはAPIの読み込み時に引数「libraries=geometry」追加する
                 //----------------------------------------------------------------------------
                //console.log("distans "+google.maps.geometry.spherical.computeDistanceBetween(old_latlng ,now_latlng));
-                if(google.maps.geometry.spherical.computeDistanceBetween(old_latlng ,now_latlng)>=geo_auto_load_between){
+                if(google.maps.geometry.spherical.computeDistanceBetween(old_latlng ,now_latlng)>=GEO_AUTO_LOAD_BETWEEN){
                     map.panTo(now_latlng);
                     dragend_old_latlng=map.getCenter();
-                    search_vicinity_poster(now_latlng.lat(),now_latlng.lng(),'*');//ポスター検索
-                    old_latlng=now_latlng;
+                    //ポスター検索
+                    m_map_data_manager.set_status('*');
+                    m_map_data_manager.set_location([now_latlng.lat(),now_latlng.lng()]);
+                    m_map_data_manager.load_nearby_data(function(){
+                        old_latlng=now_latlng;
+                    });
                 }
             },
             function(e) {
                 alert(get_geolocation_err_msg(e.code));
                 stop_geo_pos_watch();
             },
-            {enableHighAccuracy:true,timeout:geo_timeout,maximumAge:geo_maximumAge}
+            {enableHighAccuracy:true,timeout:GEO_TIMEOUT,maximumAge:GEO_MAXIMUMAGE}
         );
     }else{
         window.alert('ご利用の端末では位置情報に対応していません。');
@@ -450,15 +545,15 @@ function search_geo_pos_watch(){
  */
 function stop_geo_pos_watch(){
     if(geo_watch_id){
+        gps_tracking_mode=false;
         navigator.geolocation.clearWatch(geo_watch_id);
         geo_watch_id=0;
-        //$("#search_geo_pos_watch-btn").css({'background-color':''});//$("#search_geo_pos_watch-btn").removeClass("km-state-active");
         $("#search_geo_pos_watch-btn").removeClass('selected');
         return;
     }
 }
 /**
- * 選択した行政区のリストを生成し、行政区に該当する掲示板(全てのステータス)の問い合わせ
+ * 選択した行政区のリストから、行政区に該当する掲示板(全てのステータス)の問い合わせ
  */
 function search_countrys_poster(){
     var opl=$('#area_list');
@@ -475,6 +570,7 @@ function search_countrys_poster(){
     m_map_data_manager.set_status('*');
     m_map_data_manager.load_data(function(){
         m_map_data_manager.set_current_map_position();//表示後に全体を表示出来るサイズにズーム
+        hide_load_lock();
     });
 
     strip_tab_to('tabstrip-map');
@@ -484,36 +580,23 @@ function search_countrys_poster(){
  * ステータスが「完了と未完了」のポスターを表示
  */
 function load_now_mappos_data(){
+    show_load_lock();
     var latlng=  map.getCenter();
-    search_vicinity_poster(latlng.lat(),latlng.lng(),'*',function(){
-
+    m_map_data_manager.map_data_clear();
+    m_map_data_manager.set_status('*');
+    m_map_data_manager.set_location([latlng.lat(),latlng.lng()]);
+    m_map_data_manager.load_nearby_data(function(){
+        hide_load_lock();
     });
     strip_tab_to('tabstrip-map');
 }
 
 /**
- *指定した座標の付近の掲示板の検索
- * @param lat
- * @param lng
- * @param status 省略時は以前に設定した値を継承
- */
-function search_vicinity_poster(lat,lng,status,cb){
-    hide_load_lock();
-    m_map_data_manager.map_data_clear();
-    if(status){
-        m_map_data_manager.set_status(status);
-    }
-    m_map_data_manager.set_location([lat,lng]);
-    m_map_data_manager.load_nearby_data(cb);
-}
-
-
-/**
  * 読み込み中画面の表示・非表示
  */
 function show_load_lock(){
-    //todo:: tabstrip-map内のloaderの表示
-    APP.pane.loader.show(); //show loading animation
+    APP.changeLoadingMessage("読み込み中");
+    APP.pane.loader.show();
 }
 function hide_load_lock(){
     APP.pane.loader.hide();
