@@ -3,26 +3,29 @@
  */
 
 //=============================================================================
-// init.jsで変更可能な設定値
+// init.jsで変更可能な設定値とデフォルト値の定義
 //=============================================================================
+CAT_URL="/debug_proxy/issue_categories.json.php";
+ISSU_URL="/debug_proxy/issues.json.php";
+ISSU_LIMIT=100;//1回のリクエスト件数の上限
+ZOOM_LEVEL=15;
+MAXZOOM=19;
+MINZOOM=8;
+DEFAULT_LAT=35.66061106147289;
+DEFAULT_LNG=139.7805888205567;
+TWEET_FORMAT='@testposterdone <$subject$> #テストポスター祭り #testhash';
+GPS_AUTO_SEARCH=true;//GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索
+GPS_AUTO_POS_CLEAR=false;//GPS追尾時で地図ドラッグ時に以前のポスターを消去する
+GPS_AUTO_POS_INFO_COUNT=false;//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
+SEND_TW_POS_DATA_BACK_POST=false;//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
+POS_DATA_REV_URL='test_rev.php';//twitter共有時にバックグラウンドで掲示板データを投げるアドレス（send_tw_pos_data_back_post）有効時
 
-//省略時のデフォルト値の定義
-CAT_URL=(CAT_URL?CAT_URL:"/debug_proxy/issue_categories.json.php");//debug
-ISSU_URL=(ISSU_URL?ISSU_URL:"/debug_proxy/issues.json.php");//debug
-ISSU_LIMIT=(ISSU_LIMIT?ISSU_LIMIT:100);//1回のリクエスト件数の上限
-ZOOM_LEVEL=(ZOOM_LEVEL?ZOOM_LEVEL:15);
-MAXZOOM=(MAXZOOM?MAXZOOM:19);
-MINZOOM=(MINZOOM?MINZOOM:8);
-DEFAULT_LAT=(DEFAULT_LAT?DEFAULT_LAT:35.66061106147289);
-DEFAULT_LNG=(DEFAULT_LNG?DEFAULT_LNG:139.7805888205567);
-TWEET_FORMAT=(TWEET_FORMAT?TWEET_FORMAT:'@testposterdone <$subject$> #テストポスター祭り #testhash');
-GPS_AUTO_SEARCH=(GPS_AUTO_SEARCH?GPS_AUTO_SEARCH:true);//GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索
-GPS_AUTO_POS_CLEAR=(GPS_AUTO_POS_CLEAR?GPS_AUTO_POS_CLEAR:false);//GPS追尾時で地図ドラッグ時に以前のポスターを消去する
-GPS_AUTO_POS_INFO_COUNT=(GPS_AUTO_POS_INFO_COUNT?GPS_AUTO_POS_INFO_COUNT:false);//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
-SEND_TW_POS_DATA_BACK_POST=(SEND_TW_POS_DATA_BACK_POST?SEND_TW_POS_DATA_BACK_POST:false);//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
-POS_DATA_REV_URL=(POS_DATA_REV_URL?POS_DATA_REV_URL:'test_rev.php');//twitter共有時にバックグラウンドで掲示板データを投げるアドレス（send_tw_pos_data_back_post）有効時
-
-
+//ユーザー設定値の上書き
+for(var i in SETTING){
+    if(this[i]!=undefined && SETTING[i]!=undefined){
+        this[i]=SETTING[i];
+    }
+}
 //=============================================================================
 // 内部固定の設定値
 //=============================================================================
