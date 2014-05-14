@@ -3,7 +3,7 @@ ini_set( "display_errors", "Off");
 //define('APIURL','http://incomplete-board-map.herokuapp.com/issues.json');
 
 define('APIURL','http://beta.shirasete.jp/projects/ieiri-poster/issues.json');
-define('API_KEY','xxxxxxxxxxxxxxxxxxxxxxxx');
+define('API_KEY','2a78b1a65702832d27b817a908b42f227f8dc377');
 $_GET['key']=API_KEY;
 
 // Script: Simple PHP Proxy: Get external HTML, JSON and more!

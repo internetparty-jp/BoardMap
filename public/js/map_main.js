@@ -2,7 +2,25 @@
  * メインロジック
  */
 
-//グローバル定数（内部固定用）
+//=============================================================================
+// init.jsで変更可能な設定値
+//=============================================================================
+
+//省略時のデフォルト値の定義
+CAT_URL=(CAT_URL?CAT_URL:"/debug_proxy/issue_categories.json.php");//debug
+ISSU_URL=(ISSU_URL?ISSU_URL:"/debug_proxy/issues.json.php");//debug
+ISSU_LIMIT=(ISSU_LIMIT?ISSU_LIMIT:100);//1回のリクエスト件数の上限
+ZOOM_LEVEL=(ZOOM_LEVEL?ZOOM_LEVEL:15);
+MAXZOOM=(MAXZOOM?MAXZOOM:19);
+MINZOOM=(MINZOOM?MINZOOM:8);
+DEFAULT_LAT=(DEFAULT_LAT?DEFAULT_LAT:35.66061106147289);
+DEFAULT_LNG=(DEFAULT_LNG?DEFAULT_LNG:139.7805888205567);
+TWEET_FORMAT=(TWEET_FORMAT?TWEET_FORMAT:'@testposterdone <$subject$> #テストポスター祭り #testhash');
+POS_DATA_REV_URL=(POS_DATA_REV_URL?POS_DATA_REV_URL:'test_rev.php');//twitter共有時にバックグラウンドで掲示板データを投げるアドレス（send_tw_pos_data_back_post）有効時
+
+//=============================================================================
+// 内部固定の設定値
+//=============================================================================
 MAKER_CASH_MAX_LEN=400;//リークを防ぐ為、一定数以上溜まるとマーカーを強制消去する閾値
 //ステータスの種類　id:ステータスID ico:左上アイコン画像 name:ステータスのプルダウンに表示する名称
 STATUS_DATA_LIST={
@@ -12,10 +30,14 @@ STATUS_DATA_LIST={
 }
 
 NAVI_CON_APPNAME='AUaH70rv';//NaviCon連携スキーマの登録ID  アプリ(登録URL毎)に申請（https://github.com/open-election/BoardMap）
-GEO_AUTO_LOAD_BETWEEN=300;//MAP移動時にどの程度移動すれば、掲示板情報を再検索するか(メートル)
+GEO_AUTO_LOAD_BETWEEN=250;//MAP移動時にどの程度移動すれば、掲示板情報を再検索するか(メートル)
 GEO_MAXIMUMAGE=10000;//GPSの定期的な取得間隔(ms)　GEO_TIMEOUTより大きい値　端末のバッテリー消費に影響
 GEO_TIMEOUT=10000;//GPSのタイムアウト(ms) 精度に影響
 
+
+//=============================================================================
+// エントリーポイント
+//=============================================================================
 var currentInfoWindow;
 var APP;//kendo UI
 var user_settings;//UIから変更可能な各種ユーザー設定値
@@ -23,19 +45,13 @@ var map;
 var m_map_data_manager;
 var geocoder;
 var geo_watch_id=0;
-
 var dragend_old_latlng;//GEO_AUTO_LOAD_BETWEENの移動量判定用
 var gps_tracking_mode=false;//GPS追尾モードかのフラグ
-
 var gps_accuracy=0;//最後に取得したGPSの誤差
 
 document.ontouchmove = function(event){//スマホでBGがバウンドするのを禁止
     event.preventDefault();
 }
-
-//=============================================================================
-// エントリーポイント
-//=============================================================================
 $(function() {
 
     //-----------------------------
@@ -79,7 +95,11 @@ $(function() {
 
     //UIにバインドする各種設定値
     user_settings = kendo.observable({
-        gps_auto_search:true//地図ドラッグ時に自動的に近くのポスターを検索
+        gps_auto_search:true,//GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索
+        gps_auto_pos_clear:false,//GPS追尾時で地図ドラッグ時に以前のポスターを消去する
+        gps_auto_pos_info_count:false,//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
+        send_tw_pos_data_back_post:false,//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
+        send_tw_pos_data_addres:POS_DATA_REV_URL//ポスト先表示用
     });
     kendo.bind($("span"), user_settings);
     kendo.bind($("input"), user_settings);
@@ -165,7 +185,6 @@ function initialize(plat,plng,zoom) {
             val.bind("change",function(eve){
                 var category_id= ct_op.val();
                 var move_area_status=st_op.val();
-                stop_geo_pos_watch();//地域選択時は自動追尾を停止
                 search_country_pos(category_id,move_area_status);
             });
         });
@@ -216,7 +235,7 @@ function initialize(plat,plng,zoom) {
 
     //ポスター件数 データ要求受信中(行政区に該当する掲示板の問い合わせ 経過監視用)
     $(document).bind("on_map_data_done", function(eve,offset,total_count){
-        APP.changeLoadingMessage("受信中 "+offset+"/"+total_count);
+        APP.changeLoadingMessage("受信中 "+offset+"/"+total_count+"件");
     });
 
     //ポスター件数　データ要求完了
@@ -224,12 +243,17 @@ function initialize(plat,plng,zoom) {
         //件数表示集計
         var info_data;
         if(gps_tracking_mode){
-            //todo::GPS追尾で取得した場合
-            info_data= m_map_data_manager.get_view_disp_record_info_count();
+            //GPS追尾で取得した場合
+            if(user_settings.get("gps_auto_pos_info_count")){
+                //オプション GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
+                info_data= m_map_data_manager.get_load_pos_info_count();
+            }else{
+                info_data= m_map_data_manager.get_view_disp_pos_info_count();
+            }
         }else{
-            //todo::地域選択で呼び出した場合
+            //地域選択で呼び出した場合
             //件数表示とstatusアイコンの切り替え
-            info_data= m_map_data_manager.get_load_record_info_count();
+            info_data= m_map_data_manager.get_load_pos_info_count();
         }
 
         var now_cnt=info_data.now_cnt;
@@ -280,8 +304,13 @@ function initialize(plat,plng,zoom) {
     google.maps.event.addListener(map, 'dragend',function(){
         //ドラッグ移動終了＞画面停止イベント ドラッグ終了後の「idle」にバインド
         google.maps.event.addListenerOnce(map, 'idle', function(){
-            //GPS自動追尾時は、地図のドラッグ時に、地図の中心位置から近くの掲示板を取得
+            //オプション　GPS追尾時で地図ドラッグ時に以前のポスターを消去する
+            if(user_settings.get("gps_auto_pos_clear")){
+                m_map_data_manager.map_data_clear();
+            }
+            //オプション　GPS自動追尾時は地図のドラッグ時に、地図の中心位置から近くの掲示板を取得
             if(gps_tracking_mode && user_settings.get("gps_auto_search")){
+
                 var now_latlng=map.getCenter();
                 //GEO_AUTO_LOAD_BETWEENで指定した以上の距離の移動があれば、掲示板情報を再検索
                 if(google.maps.geometry.spherical.computeDistanceBetween(dragend_old_latlng ,now_latlng)>=GEO_AUTO_LOAD_BETWEEN){
@@ -346,17 +375,38 @@ function open_map_common_actions(tra_jq,poster_data){
     var send_nav_code_jq=$('.send_nav_code',tra_jq);
     var subject=poster_data.subject;
 
+    //twitter連携
     //ポップアップブロック回避する為に、twitterのリンクurlを直接バインドor href設定
     var tw_uri='';
     var tw_uri='https://twitter.com/intent/tweet?text='+ encodeURIComponent(TWEET_FORMAT.replace('<$subject$>',subject)) + '&url=null';
     if(('ontouchend' in window)){
+        //mobile
         send_twitter_jq.unbind("touchend");
         send_twitter_jq.bind("touchend", function(e){
             window.open(tw_uri);
         });
+
     }else{
+        //PC
         send_twitter_jq.attr('href',tw_uri);
     }
+    //twitterポスト時にバックで任意のアドレスへ掲示板データを投げる（自動集計機能）
+    if(user_settings.get("send_tw_pos_data_back_post")){
+        var msd=('ontouchend' in window)?'touchend':'click';
+        send_twitter_jq.bind(msd, function(e){
+            $.ajax({
+                type: "GET",
+                url: POS_DATA_REV_URL,
+                data: {data:poster_data.id+','+subject},
+                //dataType: 'jsonp',
+               error:function(e) {
+                   alert( "送信エラー: " +POS_DATA_REV_URL+' '+ e.status+':'+ e.statusText);
+               }
+            });
+        });
+    };
+
+    //掲示板が座標を保持しているか確認
     var ini_ll=eval("a="+poster_data.geometry);
     var lat_lng;
     if(ini_ll){
@@ -419,8 +469,10 @@ function layout_tabstrip_onshow(){
  * エリアの移動（住所）
  */
 function move_area_address(){
+    stop_geo_pos_watch();
   var addre=$("#move_area_address").val();
    if(!geocoder){alert("geocoderエラー");return;}
+    show_load_lock();
     geocoder.geocode({ 'address': addre}, function(res, st)
     {
         if (st == google.maps.GeocoderStatus.OK) {
@@ -430,13 +482,16 @@ function move_area_address(){
             m_map_data_manager.set_status('*');
             m_map_data_manager.set_location([location.lat(),location.lng()]);
             m_map_data_manager.load_nearby_data(function(){
+                hide_load_lock();
                 m_map_data_manager.set_current_map_position();//表示後に全体を表示出来るサイズにズーム
             });
             strip_tab_to('tabstrip-map');
     }else if(st ==google.maps.GeocoderStatus.INVALID_REQUEST||st ==google.maps.GeocoderStatus.ZERO_RESULTS){
       alert("入力した住所では場所が特定出来ませんでした。\n入力した住所に間違いが無いか確認して下さい。\nまた市区町村は必ず入れて下さい。");
-    }else{
+            hide_load_lock();
+        }else{
       alert("サーバーに接続出来ません。時間をあけてから検索してみて下さい："+st);
+            hide_load_lock();
     }
 
   });
@@ -446,6 +501,7 @@ function move_area_address(){
  * 行政区と掲示板のステータスを指定して表示
  */
 function search_country_pos(category_id,status,cb){
+    stop_geo_pos_watch();//地域選択時は自動追尾を停止
     if(!category_id){return;}
         show_load_lock();
         m_map_data_manager.map_data_clear();
@@ -556,15 +612,18 @@ function stop_geo_pos_watch(){
  * 選択した行政区のリストから、行政区に該当する掲示板(全てのステータス)の問い合わせ
  */
 function search_countrys_poster(){
+
     var opl=$('#area_list');
     var ids=[];
     $(':checked',opl).each(function(){
         ids.push($(this).val());
     });
-    if(ids.length>5){
+    if(ids.length>100){
         alert("選択は5件以内にして下さい");
         return;
     }
+    stop_geo_pos_watch();
+    show_load_lock();
     m_map_data_manager.map_data_clear();
     m_map_data_manager.set_category_ids(ids);
     m_map_data_manager.set_status('*');
@@ -580,6 +639,7 @@ function search_countrys_poster(){
  * ステータスが「完了と未完了」のポスターを表示
  */
 function load_now_mappos_data(){
+    stop_geo_pos_watch();
     show_load_lock();
     var latlng=  map.getCenter();
     m_map_data_manager.map_data_clear();

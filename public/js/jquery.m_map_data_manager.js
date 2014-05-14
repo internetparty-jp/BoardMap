@@ -330,7 +330,7 @@ $.m_map_data_manager = function(element, options) {
     /**
      * 読み込んだポスター件数情報の取得 （地域選択用）
      */
-    plugin.get_load_record_info_count=function(){
+    plugin.get_load_pos_info_count=function(){
         //console.time('timer');
         var now_cnt={};
         // _overlay[id].data_.status.id を総なめして算出
@@ -344,8 +344,10 @@ $.m_map_data_manager = function(element, options) {
     }
     /**
      * 画面上に表示されているポスター件数情報の取得 （GPS追尾用）
+     * todo::現在の画面上の表示件数カウントしたいがGMAPにそのようなAPI自体が無い為、保留（Markermanagerで別途管理するのはコスト高い）
+     * 現状はtotalのみ返す
      */
-    plugin.get_view_disp_record_info_count=function(){
+    plugin.get_view_disp_pos_info_count=function(){
         var now_cnt={};
         for(var idx in STATUS_DATA_LIST){
             now_cnt[idx]=undefined;
@@ -414,9 +416,8 @@ $.m_map_data_manager = function(element, options) {
   var _receive_new_area= function(json_d){
       //--------------------------------------------------------
       //連続して読み込むとマーカーのキャッシュ(_overlay)が溜まるので、一定以上で解放(map_data_clear())する
-      //地域選択時は 以前野データをclear（_overlay=0) してしてから取得されるので、MAKER_CASH_MAX_LENの影響を受けない
       //--------------------------------------------------------
-      if(MAKER_CASH_MAX_LEN < Object.keys(_overlay).length){
+      if(gps_tracking_mode&&(MAKER_CASH_MAX_LEN <= Object.keys(_overlay).length)){
           plugin.map_data_clear();
       }
     _data_substitution(json_d);
@@ -452,7 +453,6 @@ $.m_map_data_manager = function(element, options) {
                 _map_data[i]=list[i];
             }
         };
-
     /*
      //---------------------------//
      //todo::API側でで表示している地図の矩形範囲(4点の経度緯度)に該当する掲示板を返せるような仕様ならば、ここを改修
@@ -527,16 +527,7 @@ $.m_map_data_manager = function(element, options) {
         return isNaN(r)?MINZOOM:r;
     }
 
-    /**
-     * objectのlengthを算出
-     */
-    var _obj_len=function(obj){
-        var cnt=0;
-        for(var i in obj){
-           ++cnt;
-        }
-        return cnt;
-    }
+
 
     /**
      * geometryのlatlngの値をチェック

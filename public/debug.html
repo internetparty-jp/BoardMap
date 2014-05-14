@@ -112,14 +112,16 @@
             </ul>
         </li>
         <li>
-            GPS設定
+            [試験機能]GPS設定(リロードで初期化されます)
             <ul>
-                <li class="small">GPS追尾時に地図をドラッグした時<br/>自動的に近くのポスターを検索<input data-role="switch" id="email-switch"  data-bind="checked:gps_auto_search" /></li>
-
+                <li class="small">GPS追尾時に地図をドラッグした時<br/>自動的に近くのポスターを検索<input data-role="switch" id="gps_auto_search-switch"  data-bind="checked:gps_auto_search" /></li>
+                <li class="small">GPS追尾時に地図をドラッグした時<br/>以前のポスターを消去する<input data-role="switch" id="gps_auto_pos_clear-switch"  data-bind="checked:gps_auto_pos_clear" /></li>
+                <li class="small">GPS追尾時で地図をドラッグした時<br/>ロード済の掲示板の件数をカウントする<br/>(表示が遅くなります)<input data-role="switch" id="gps_auto_pos_info_count-switch"  data-bind="checked:gps_auto_pos_info_count" /></li>
+                <li class="small">twitter共有時にバックグラウンドで<br/>別のアドレスに掲示板データを投げる<br/>(<span data-bind="text:send_tw_pos_data_addres"></span>)<input data-role="switch" id="send_tw_pos_data_back_post-switch"  data-bind="checked:send_tw_pos_data_back_post" /></li>
             </ul>
         </li>
         <li>
-            行政区 一括選択
+            [試験機能]行政区一括選択
             <ul>
                 <li>表示する行政区を一括で表示します<br/><span class="small">注意）APIの負荷軽減の為、選択は最大5件までです。スマホ等ではフリーズする場合があります。</span></li>
                 <li>

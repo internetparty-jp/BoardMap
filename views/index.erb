@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="target-densitydpi=device-dpi, width=device-width, user-scalable=no,initial-scale=1.0,maximum-scale=1.0, minimum-scale=1.0" />
+    <meta name="viewport" content="width=device-width, user-scalable=no,initial-scale=1.0,maximum-scale=1.0, minimum-scale=1.0" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="BoardMap">
@@ -105,20 +105,22 @@
             掲示板データについて
             <ul>
                 <li>このアプリは、せんきょ.みんなのAPIから随時取得して表示しています。<br/>
-                    <a href="http://openelection.tumblr.com/" target="_blank">http://openelection.tumblr.com/</a></li>
+                    <a href="http://xn--w8j1azjvb.xn--q9jyb4c/" target="_blank">http://せんきょ.みんな/</a></li>
             </ul>
         </li>
         <li>
-            GPS設定
+            [試験機能]GPS設定(リロードで初期化されます)
             <ul>
-                <li>GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索<input data-role="switch" id="email-switch"  data-bind="checked:gps_auto_search" /></li>
-
+                <li class="small">GPS追尾時に地図をドラッグした時<br/>自動的に近くのポスターを検索<input data-role="switch" id="gps_auto_search-switch"  data-bind="checked:gps_auto_search" /></li>
+                <li class="small">GPS追尾時に地図をドラッグした時<br/>以前のポスターを消去する<input data-role="switch" id="gps_auto_pos_clear-switch"  data-bind="checked:gps_auto_pos_clear" /></li>
+                <li class="small">GPS追尾時で地図をドラッグした時<br/>ロード済の掲示板の件数をカウントする<br/>(表示が遅くなります)<input data-role="switch" id="gps_auto_pos_info_count-switch"  data-bind="checked:gps_auto_pos_info_count" /></li>
+                <li class="small">twitter共有時にバックグラウンドで<br/>別のアドレスに掲示板データを投げる<br/>(<span data-bind="text:send_tw_pos_data_addres"></span>)<input data-role="switch" id="send_tw_pos_data_back_post-switch"  data-bind="checked:send_tw_pos_data_back_post" /></li>
             </ul>
         </li>
         <li>
-            行政区 一括選択
+            [試験機能]行政区一括選択
             <ul>
-                <li>表示する行政区を一括で表示します<br/>注意）APIの負荷軽減の為、選択は最大5件までです。スマホ等ではフリーズする場合があります。</li>
+                <li>表示する行政区を一括で表示します<br/><span class="small">注意）APIの負荷軽減の為、選択は最大5件までです。スマホ等ではフリーズする場合があります。</span></li>
                 <li>
                     <div id="area_list"></div>
                     <hr/>
@@ -131,7 +133,7 @@
             [試験機能]住所で検索
             <ul>
                 <li>住所から、該当する地域の付近の掲示板を表示<br/>
-                    注意）APIの都合場、その位置を中心とした近い順に最大100件のみ表示されます。</li>
+                    <span class="small">注意）APIの都合場、その位置を中心とした近い順に最大100件のみ表示されます。</span></li>
                 <li>
                     <input name="move_area_address" class="input_text_mid" type="text" id="move_area_address" value=""/>
                     <a class="button" data-role="button" data-click="move_area_address">移動</a>
@@ -142,7 +144,8 @@
             [試験機能]現在の地図の中心位置から近くの掲示板を表示
             <ul>
                 <li>
-                    現在表示している地図の位置にある掲示板を表示<br/>注意）APIの都合場、その位置を中心とした近い順に最大100件のみ表示されます。
+                    現在表示している地図の位置にある掲示板を表示<br/>
+                    <span class="small">注意）APIの都合場、その位置を中心とした近い順に最大100件のみ表示されます。</span>
                     <hr/><a class="button" data-role="button" data-click="load_now_mappos_data" >表示</a>
                 </li>
             </ul>
