@@ -16,7 +16,12 @@ MINZOOM=(MINZOOM?MINZOOM:8);
 DEFAULT_LAT=(DEFAULT_LAT?DEFAULT_LAT:35.66061106147289);
 DEFAULT_LNG=(DEFAULT_LNG?DEFAULT_LNG:139.7805888205567);
 TWEET_FORMAT=(TWEET_FORMAT?TWEET_FORMAT:'@testposterdone <$subject$> #テストポスター祭り #testhash');
+GPS_AUTO_SEARCH=(GPS_AUTO_SEARCH?GPS_AUTO_SEARCH:true);//GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索
+GPS_AUTO_POS_CLEAR=(GPS_AUTO_POS_CLEAR?GPS_AUTO_POS_CLEAR:false);//GPS追尾時で地図ドラッグ時に以前のポスターを消去する
+GPS_AUTO_POS_INFO_COUNT=(GPS_AUTO_POS_INFO_COUNT?GPS_AUTO_POS_INFO_COUNT:false);//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
+SEND_TW_POS_DATA_BACK_POST=(SEND_TW_POS_DATA_BACK_POST?SEND_TW_POS_DATA_BACK_POST:false);//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
 POS_DATA_REV_URL=(POS_DATA_REV_URL?POS_DATA_REV_URL:'test_rev.php');//twitter共有時にバックグラウンドで掲示板データを投げるアドレス（send_tw_pos_data_back_post）有効時
+
 
 //=============================================================================
 // 内部固定の設定値
@@ -95,10 +100,10 @@ $(function() {
 
     //UIにバインドする各種設定値
     user_settings = kendo.observable({
-        gps_auto_search:true,//GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索
-        gps_auto_pos_clear:false,//GPS追尾時で地図ドラッグ時に以前のポスターを消去する
-        gps_auto_pos_info_count:false,//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
-        send_tw_pos_data_back_post:false,//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
+        gps_auto_search:GPS_AUTO_SEARCH,//GPS追尾時で地図ドラッグ時に自動的に近くのポスターを検索
+        gps_auto_pos_clear:GPS_AUTO_POS_CLEAR,//GPS追尾時で地図ドラッグ時に以前のポスターを消去する
+        gps_auto_pos_info_count:GPS_AUTO_POS_INFO_COUNT,//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
+        send_tw_pos_data_back_post:SEND_TW_POS_DATA_BACK_POST,//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
         send_tw_pos_data_addres:POS_DATA_REV_URL//ポスト先表示用
     });
     kendo.bind($("span"), user_settings);
