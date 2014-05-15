@@ -19,6 +19,7 @@ GPS_AUTO_POS_CLEAR=false;//GPS追尾時で地図ドラッグ時に以前のポ�
 GPS_AUTO_POS_INFO_COUNT=false;//GPS追尾時で地図ドラッグ時に掲示板の件数をカウントする
 SEND_TW_POS_DATA_BACK_POST=false;//twitter共有時にバックグラウンドで別のアドレスに掲示板データを投げる
 POS_DATA_REV_URL='test_rev.php';//twitter共有時にバックグラウンドで掲示板データを投げるアドレス（send_tw_pos_data_back_post）有効時
+BROWSER_RESTRICTION=false;//ブラウザ制限をするか
 
 //ユーザー設定値の上書き
 for(var i in SETTING){
@@ -61,29 +62,19 @@ document.ontouchmove = function(event){//スマホでBGがバウンドするの�
     event.preventDefault();
 }
 $(function() {
-
     //-----------------------------
     //動作環境をチェック　動作環境はchromeとsafariのみ。それ以外は起動しない
     //-----------------------------
+    var ch=browser_check();
 
-    var ua=navigator.userAgent.toLocaleLowerCase();
-    var checker=false;
-    var addhtml="";
-    if(ua.indexOf("android")!=-1){//android
-        checker=(ua.indexOf("chrome")!=-1);//androidはchromeのみ
-        addhtml='<br/><a href="https://play.google.com/store/apps/details?id=com.android.chrome&hl=ja"><img alt="" src="/img/google_play.jpg"></a>';
-      //  alert("android "+checker);
-    }else if(ua.indexOf("iphone")!=-1||ua.indexOf("ipad")!=-1||ua.indexOf("ipod")!=-1){//ios
-        checker=(ua.indexOf("safari")!=-1 && ua.indexOf("mobile")!=-1);//ipad iphone はsafariのみ（chromeは不可）
-       // alert("ios "+checker);
-    }else{//それ以外の端末は動作保証外だが、動くかもしれないので、safariとchromeならOKにしておく。
-        checker=(ua.indexOf("safari")!=-1 || ua.indexOf("chrome")!=-1);
-       // alert("other "+checker);
-    }
-    if(!checker){
-        alert("本アプリの利用は、Chrome又はSafariをご利用下さい。");
-        $('body').html('動作対象外のブラウザです<br/>本アプリの利用は、Chrome又はSafariをご利用下さい。'+addhtml);
-        return;
+    if(BROWSER_RESTRICTION){
+        if(!ch[0]){
+            alert("本アプリの利用は、Chrome又はSafariをご利用下さい。");
+              $('body').html('動作対象外のブラウザです<br/>本アプリの利用は、Chrome又はSafariをご利用下さい。'+ch[1]);
+            return;
+        }
+    }else{
+        alert("本アプリの推奨ブラウザはChrome又はSafariになります。\nそれ以外では正常に動作しない可能性があります。");
     }
 
     //-----------------------------
@@ -626,7 +617,7 @@ function search_countrys_poster(){
     $(':checked',opl).each(function(){
         ids.push($(this).val());
     });
-    if(ids.length>100){
+    if(ids.length>5){
         alert("選択は5件以内にして下さい");
         return;
     }
@@ -701,4 +692,29 @@ function is_app_store(){
 function get_geolocation_err_msg(int){
     var ms= ['0','GPSの取得を許可されていません','GPSの取得に失敗しました','GPSを取得中にタイムアウトしました'];
     return (ms[int]?ms[int]:'GPSの取得に失敗しました');
+}
+/**
+ * ブラウザのチェック
+ **/
+
+function browser_check(){
+        //-----------------------------
+        //動作環境をチェック　動作環境はchromeとsafariのみ。それ以外は起動しない
+        //-----------------------------
+        var ua=navigator.userAgent.toLocaleLowerCase();
+        var checker=false;
+        var addhtml="";
+        if(ua.indexOf("android")!=-1){//android
+            checker=(ua.indexOf("chrome")!=-1);//androidはchromeのみ
+            addhtml='<br/><a href="https://play.google.com/store/apps/details?id=com.android.chrome&hl=ja"><img alt="" src="/img/google_play.jpg"></a>';
+            //  alert("android "+checker);
+        }else if(ua.indexOf("iphone")!=-1||ua.indexOf("ipad")!=-1||ua.indexOf("ipod")!=-1){//ios
+            // checker=(ua.indexOf("safari")!=-1&& ua.indexOf("mobile")!=-1);//ipad iphone はsafariのみ（chromeは不可）
+            checker=(ua.indexOf("applewebkit")!=-1&& ua.indexOf("mobile")!=-1);//ipad iphone はsafariのみ（chromeは不可）
+            // alert("ios "+checker);
+        }else{//それ以外の端末は動作保証外だが、動くかもしれないので、safariとchromeならOKにしておく。
+            checker=(ua.indexOf("safari")!=-1 || ua.indexOf("chrome")!=-1);
+            // alert("other "+checker);
+        }
+        return [checker,addhtml];
 }
