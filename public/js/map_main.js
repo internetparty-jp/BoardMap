@@ -66,15 +66,14 @@ $(function() {
     //動作環境をチェック　動作環境はchromeとsafariのみ。それ以外は起動しない
     //-----------------------------
     var ch=browser_check();
-
-    if(BROWSER_RESTRICTION){
-        if(!ch[0]){
+    if(!ch[0]){
+        if(BROWSER_RESTRICTION){
             alert("本アプリの利用は、Chrome又はSafariをご利用下さい。");
-              $('body').html('動作対象外のブラウザです<br/>本アプリの利用は、Chrome又はSafariをご利用下さい。'+ch[1]);
+            $('body').html('動作対象外のブラウザです<br/>本アプリの利用は、Chrome又はSafariをご利用下さい。'+ch[1]);
             return;
+        }else{
+            alert("本アプリの推奨ブラウザはChrome又はSafariになります。\nそれ以外では正常に動作しない可能性があります。");
         }
-    }else{
-        alert("本アプリの推奨ブラウザはChrome又はSafariになります。\nそれ以外では正常に動作しない可能性があります。");
     }
 
     //-----------------------------
